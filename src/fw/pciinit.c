@@ -393,6 +393,7 @@ void pci_resume(void)
         ich9_smbus_enable(ICH9SmbusBDF);
     }
 
+    dprintf(1, "PCI resume: MCHMmcfgBDF = %d\n", MCHMmcfgBDF);
     if(MCHMmcfgBDF >= 0) {
         mch_mmconfig_setup(MCHMmcfgBDF);
     }
@@ -491,7 +492,9 @@ static void mch_mem_addr_setup(struct pci_device *dev, void *arg)
     u32 size = Q35_HOST_BRIDGE_PCIEXBAR_SIZE;
 
     /* setup mmconfig */
+    int prev = MCHMmcfgBDF;
     MCHMmcfgBDF = dev->bdf;
+    dprintf(1, "MCHMmcfgBDF %d -> %d\n", prev, MCHMmcfgBDF);
     mch_mmconfig_setup(dev->bdf);
     e820_add(addr, size, E820_RESERVED);
 
@@ -535,6 +538,7 @@ pci_bios_init_bus_rec(int bus, u8 *pci_bus)
     u16 class;
 
     dprintf(1, "PCI: %s bus = 0x%x\n", __func__, bus);
+    dprintf(1, "Cap used = %d\n", abv.cu);
 
     /* prevent accidental access to unintended devices */
     foreachbdf(bdf, bus) {
@@ -580,13 +584,25 @@ pci_bios_init_bus_rec(int bus, u8 *pci_bus)
 
         if (subbus != *pci_bus) {
             u8 res_bus = 0;
-            if (pci_config_readw(bdf, PCI_VENDOR_ID) == PCI_VENDOR_ID_REDHAT) {
-                u8 cap = pci_find_capability(bdf, PCI_CAP_ID_VNDR, 0);
-                if (cap) {
-                    res_bus = pci_config_readb(bdf,
-                            cap + offsetof(struct redhat_pci_bridge_cap,
-                                           bus_res));
+            if (!abv.cu) {
+                if (pci_config_readw(bdf, PCI_VENDOR_ID) == PCI_VENDOR_ID_REDHAT
+                        && pci_config_readw(bdf, PCI_DEVICE_ID) == 0xC) {
+                    u8 cap = pci_find_capability(bdf, PCI_CAP_ID_VNDR, 0);
+                    if (cap) {
+                        res_bus = pci_config_readb(bdf,
+                                cap + offsetof(struct redhat_pci_bridge_cap,
+                                               bus_res)) + 3;
+                        barrier();
+                        abv.cu = 1;
+                        abv.sub_val = *pci_bus + res_bus;
+                        barrier();
+                        dprintf(1, "RP found: cap_applied = %d\n",
+                                abv.cu);
+                    }
                 }
+            } else {
+                res_bus = -*pci_bus + abv.sub_val;
+                dprintf(1, "Cap was used - restoring value\n");
             }
             dprintf(1, "PCI: subordinate bus = 0x%x -> 0x%x\n",
                     subbus, *pci_bus + res_bus);

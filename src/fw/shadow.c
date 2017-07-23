@@ -174,8 +174,8 @@ qemu_reboot(void)
     // QEMU doesn't map 0xc0000-0xfffff back to the original rom on a
     // reset, so do that manually before invoking a hard reset.
     void *cstart = VSYMBOL(code32flat_start), *cend = VSYMBOL(code32flat_end);
-    void *hrp = &HaveRunPost;
-    if (readl(hrp + BIOS_SRC_OFFSET)) {
+    void *v = &abv;
+    if (readl(v + BIOS_SRC_OFFSET)) {
         // Some old versions of KVM don't store a pristine copy of the
         // BIOS in high memory.  Try to shutdown the machine instead.
         dprintf(1, "Unable to hard-reboot machine - attempting shutdown.\n");
@@ -183,10 +183,10 @@ qemu_reboot(void)
     }
     // Copy the BIOS making sure to only reset HaveRunPost at end
     make_bios_writable();
-    memcpy(cstart, cstart + BIOS_SRC_OFFSET, hrp - cstart);
-    memcpy(hrp + 4, hrp + 4 + BIOS_SRC_OFFSET, cend - (hrp + 4));
+    memcpy(cstart, cstart + BIOS_SRC_OFFSET, v - cstart);
+    memcpy(v + 12, v + 12 + BIOS_SRC_OFFSET, cend - (v + 12));
     barrier();
-    HaveRunPost = 0;
+    abv.hrp = 0;
     barrier();
 
     // Request a QEMU system reset.  Do the reset in this function as

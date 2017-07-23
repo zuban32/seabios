@@ -172,7 +172,7 @@ prepareboot(void)
     malloc_prepboot();
     e820_prepboot();
 
-    HaveRunPost = 2;
+    abv.hrp = 2;
 
     // Setup bios checksum.
     BiosChecksum -= checksum((u8*)BUILD_BIOS_ADDR, BUILD_BIOS_SIZE);
@@ -287,13 +287,13 @@ reloc_preinit(void *f, void *arg)
 void
 code_mutable_preinit(void)
 {
-    if (HaveRunPost)
+    if (abv.hrp)
         // Already run
         return;
     // Setup reset-vector entry point (controls legacy reboots).
     rtc_write(CMOS_RESET_CODE, 0);
     barrier();
-    HaveRunPost = 1;
+    abv.hrp = 1;
     barrier();
 }
 

@@ -32,6 +32,12 @@ struct segoff_s {
     };
 };
 
+struct ab_vars {
+    int hrp;
+    int cu;
+    int sub_val;
+};
+
 #ifdef MANUAL_NO_JUMP_TABLE
 # define default case 775324556: asm(""); default
 #endif

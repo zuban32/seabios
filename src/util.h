@@ -4,6 +4,7 @@
 
 #include "types.h" // u32
 
+
 // apm.c
 void apm_shutdown(void);
 struct bregs;
@@ -188,7 +189,7 @@ void handle_15c2(struct bregs *regs);
 void process_key(u8 key);
 
 // misc.c
-extern int HaveRunPost;
+extern struct ab_vars abv;
 extern struct bios_config_table_s BIOS_CONFIG_TABLE __aligned(1);
 extern struct floppy_dbt_s diskette_param_table __aligned(1);
 extern u8 BiosChecksum;
